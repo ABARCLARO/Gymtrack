@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>GymTrack — Push / Pull / Legs</title>
+<meta name="description" content="A push/pull/legs training log with progressive-overload targets built in.">
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a0e13">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GymTrack">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0e13;--panel:#111820;--panel-2:#0d131a;--line:#1e2a36;--line-soft:#17212b;
+    --text:#d6e0e9;--dim:#6a7d8d;--dimmer:#465562;
+    --amber:#ffb020;--amber-soft:#3a2c0e;--green:#3fd07a;--green-soft:#0f2a1c;--red:#ff6b6b;
+    --mono:'IBM Plex Mono',ui-monospace,monospace;--sans:'IBM Plex Sans',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+  body{padding:0 16px calc(96px + env(safe-area-inset-bottom));max-width:920px;margin:0 auto;line-height:1.5}
+  a{color:var(--amber)}
+
+  .bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--dim);
+    padding:calc(18px + env(safe-area-inset-top)) 4px 14px;border-bottom:1px solid var(--line-soft);
+    margin-bottom:22px;position:sticky;top:0;background:var(--bg);z-index:20}
+  .bar .prompt{color:var(--green)}.bar .path{color:var(--dim)}
+  .bar .op{color:var(--text);border:none;background:transparent;font-family:var(--mono);font-size:13px;
+    border-bottom:1px dashed var(--dimmer);padding:1px 2px;min-width:70px;outline:none}
+  .bar .op:focus{border-bottom-color:var(--amber);color:var(--amber)}
+  .bar .spacer{flex:1}
+  .bar .install{color:var(--amber);cursor:pointer;font-size:12px;border:1px solid var(--amber-soft);
+    border-radius:6px;padding:4px 9px;background:transparent;font-family:var(--mono)}
+  .bar .install:hover{background:var(--amber-soft)}
+  .bar .reset{color:var(--dimmer);cursor:pointer;font-size:12px;text-decoration:underline;text-underline-offset:3px;
+    background:none;border:none;font-family:var(--mono)}
+  .bar .reset:hover{color:var(--red)}
+
+  .board{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:14px}
+  @media(max-width:640px){.board{grid-template-columns:1fr}}
+  .cell{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 20px}
+  .cell .lbl{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:14px}
+  .scan{position:relative;height:8px;background:var(--panel-2);border:1px solid var(--line-soft);border-radius:5px;overflow:hidden;margin-bottom:12px}
+  .scan .fill{height:100%;background:linear-gradient(90deg,var(--green),#7ee6ac);transition:width .5s ease}
+  .scan .sweep{position:absolute;top:0;bottom:0;width:70px;left:-70px;
+    background:linear-gradient(90deg,transparent,rgba(255,176,32,.22),transparent);animation:sweep 3.4s linear infinite}
+  @keyframes sweep{0%{left:-70px}100%{left:100%}}
+  @media(prefers-reduced-motion:reduce){.scan .sweep{display:none}.scan .fill{transition:none}}
+  .scan-meta{font-family:var(--mono);font-size:12px;color:var(--dim)}
+  .scan-meta b{color:var(--text);font-weight:600}
+
+  .stat-stack{display:flex;flex-direction:column;gap:14px;justify-content:center;height:100%}
+  .stat{display:flex;align-items:baseline;gap:10px}
+  .stat .num{font-family:var(--mono);font-size:30px;font-weight:700;line-height:1}
+  .stat .unit{font-family:var(--mono);font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em}
+  .stat.flame .num{color:var(--amber)}
+  .stat.phase .num{font-size:15px;color:var(--text);font-weight:600}
+
+  .section-tag{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);
+    margin:30px 2px 12px;display:flex;align-items:center;gap:10px}
+  .section-tag::before{content:"";width:6px;height:6px;background:var(--amber);border-radius:50%;flex:none}
+  .section-tag.done-tag::before{background:var(--green)}
+  .section-tag .spacer{flex:1}
+
+  .switch{display:flex;gap:6px}
+  .switch button{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    background:transparent;border:1px solid var(--line);color:var(--dimmer);border-radius:6px;padding:5px 10px;cursor:pointer}
+  .switch button.on{color:var(--amber);border-color:var(--amber-soft);background:var(--amber-soft)}
+
+  .mission{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:10px;padding:22px 20px 20px}
+  .mission .wk{font-family:var(--mono);font-size:12px;color:var(--amber);letter-spacing:.1em;margin-bottom:4px}
+  .mission h2{font-size:22px;font-weight:600;letter-spacing:-.01em;margin-bottom:10px}
+  .mission .why{color:var(--dim);font-size:14.5px;margin-bottom:20px;max-width:62ch}
+
+  .lift{border-bottom:1px solid var(--line-soft);padding:12px 2px 13px}
+  .lift:last-of-type{border-bottom:none}
+  .lift-top{display:flex;gap:11px;align-items:baseline}
+  .lift .glyph{font-family:var(--mono);font-size:13px;color:var(--dimmer);flex:none;width:16px}
+  .lift.on .glyph{color:var(--green)}
+  .lift .nm{font-size:14.5px;flex:1}
+  .lift.on .nm{color:var(--dim)}
+  .lift .tgt{font-family:var(--mono);font-size:11px;color:var(--dimmer);white-space:nowrap}
+  .lift .prev{font-family:var(--mono);font-size:11.5px;color:var(--amber);margin:6px 0 0 27px;letter-spacing:.02em}
+  .lift .prev.cold{color:var(--dimmer)}
+  .sets{display:flex;flex-wrap:wrap;gap:6px;margin:9px 0 0 27px}
+  .set{display:flex;align-items:center;gap:3px;background:var(--panel-2);border:1px solid var(--line-soft);border-radius:7px;padding:4px 6px}
+  .set.beat{border-color:var(--green);background:var(--green-soft)}
+  .set input{width:38px;background:transparent;border:none;color:var(--text);font-family:var(--mono);
+    font-size:15px;font-weight:600;text-align:center;outline:none;-moz-appearance:textfield}
+  .set input::-webkit-outer-spin-button,.set input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .set input::placeholder{color:var(--dimmer)}
+  .set input:focus{color:var(--amber)}
+  .set .x{font-family:var(--mono);font-size:11px;color:var(--dimmer)}
+  .set .up{font-family:var(--mono);font-size:11px;color:var(--green)}
+  .setctl{display:flex;gap:6px;margin:9px 0 0 27px}
+  .setctl button{font-family:var(--mono);font-size:11px;background:transparent;border:1px solid var(--line-soft);
+    color:var(--dimmer);border-radius:6px;padding:4px 9px;cursor:pointer}
+  .setctl button:hover{color:var(--text);border-color:var(--line)}
+
+  .subcard{border:1px solid var(--line-soft);border-radius:8px;padding:13px 15px;margin-top:14px;background:var(--panel-2)}
+  .subcard .h{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px}
+  .subcard.lab .h{color:var(--green)}.subcard.recall .h{color:var(--amber)}
+  .subcard p{font-size:14px}.subcard.recall p{color:var(--dim);font-style:italic}
+
+  .notes{width:100%;margin-top:14px;background:var(--panel-2);border:1px solid var(--line-soft);border-radius:8px;
+    color:var(--text);font-family:var(--mono);font-size:13px;padding:11px 13px;resize:vertical;min-height:56px;outline:none;line-height:1.6}
+  .notes:focus{border-color:var(--line)}.notes::placeholder{color:var(--dimmer)}
+
+  .skills{display:flex;flex-wrap:wrap;gap:7px}
+  .skill{font-family:var(--mono);font-size:11.5px;padding:5px 10px;border-radius:20px;border:1px solid var(--line-soft);color:var(--dimmer);transition:.2s}
+  .skill.on{color:var(--green);border-color:var(--green-soft);background:var(--green-soft)}
+
+  .wkrow{border:1px solid var(--line-soft);border-radius:9px;margin-bottom:6px;overflow:hidden;background:var(--panel-2)}
+  .wkrow .head{display:flex;align-items:center;gap:12px;padding:12px 15px;cursor:pointer;transition:background .12s}
+  .wkrow .head:hover{background:var(--panel)}
+  .wkrow .glyph{font-family:var(--mono);font-size:13px;flex:none;width:20px;text-align:center;color:var(--green)}
+  .wkrow .wname{font-size:14.5px;flex:1}
+  .wkrow .wmeta{font-family:var(--mono);font-size:11px;color:var(--dimmer)}
+  .wkrow .chev{color:var(--dimmer);font-family:var(--mono);font-size:12px;transition:transform .2s}
+  .wkrow.open .chev{transform:rotate(90deg)}
+  .wkrow .body{display:none;padding:2px 15px 16px;border-top:1px solid var(--line-soft)}
+  .wkrow.open .body{display:block}
+  .wkrow .body .ln{font-family:var(--mono);font-size:12.5px;color:var(--dim);margin:7px 0}
+  .wkrow .body .ln b{color:var(--text);font-weight:600}
+  .wkrow .body .nt{font-family:var(--mono);font-size:12px;color:var(--dimmer);font-style:italic;margin-top:10px}
+  .wkrow .delbtn{font-family:var(--mono);font-size:11px;color:var(--dimmer);background:transparent;
+    border:1px solid var(--line-soft);border-radius:6px;padding:5px 10px;cursor:pointer;margin-top:12px}
+  .wkrow .delbtn:hover{color:var(--red);border-color:var(--red)}
+
+  .commit{position:fixed;left:0;right:0;bottom:0;background:rgba(10,14,19,.93);backdrop-filter:blur(9px);
+    border-top:1px solid var(--line);padding:11px 16px calc(11px + env(safe-area-inset-bottom));z-index:30}
+  .commit-in{max-width:920px;margin:0 auto;display:flex;gap:8px;align-items:center}
+  .commit .msg{font-family:var(--mono);font-size:11px;color:var(--dim);text-align:center;
+    max-width:920px;margin:0 auto 8px;min-height:15px}
+  .commit .go{flex:1;background:var(--green);color:#062713;border:none;border-radius:8px;padding:14px;
+    font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+  .commit .go:hover{filter:brightness(1.08)}
+  .commit .alt{background:transparent;border:1px solid var(--line);color:var(--dim);border-radius:8px;
+    padding:14px 13px;font-family:var(--mono);font-size:12px;cursor:pointer}
+  .commit .alt:hover{color:var(--amber);border-color:var(--amber-soft)}
+
+  .empty{font-family:var(--mono);font-size:12.5px;color:var(--dimmer);border:1px dashed var(--line-soft);
+    border-radius:9px;padding:20px 16px;text-align:center;line-height:1.7}
+  .foot{font-family:var(--mono);font-size:12px;color:var(--dimmer);text-align:center;margin-top:36px;line-height:1.8}
+  .foot b{color:var(--dim);font-weight:500}
+  .loading{text-align:center;color:var(--dim);font-family:var(--mono);padding:60px 0;font-size:13px}
+</style>
+</head>
+<body>
+  <div id="app"><div class="loading">loading your log…</div></div>
+
+<script>
+/* ============================ PROGRAM ============================ */
+const DAYS=['push','pull','legs'];
+const PROGRAM={
+  push:{label:'Push',slot:'TUE',title:'Chest · Shoulders · Triceps',
+    why:"Everything that presses, trained together. Your triceps and front delts are already assisting every chest press — hitting them the same day means they get fatigued once a week, not twice.",
+    cue:"Heavy chest first, triceps last. Reverse the order and your bench suffers for nothing.",
+    lifts:[
+      ["Bench press","4 × 6–10",4,["chest","front-delts","triceps"]],
+      ["Incline dumbbell press","3 × 8–12",3,["upper-chest","front-delts"]],
+      ["Dip or decline press","3 × 8–12",3,["chest","triceps"]],
+      ["Cable fly","3 × 12–15",3,["chest"]],
+      ["Overhead press","3 × 6–10",3,["front-delts","side-delts","triceps"]],
+      ["Lateral raise","4 × 12–20",4,["side-delts"]],
+      ["Overhead extension","3 × 10–15",3,["triceps"]],
+      ["Rope pushdown","3 × 12–15",3,["triceps"]],
+      ["Hanging leg raise","3 × 10–15",3,["abs"]],
+    ]},
+  pull:{label:'Pull',slot:'WED',title:'Back · Biceps · Forearms',
+    why:"Everything that pulls. Nothing here competes with yesterday's pressing, which is exactly why back-to-back days work — a tired triceps doesn't limit a row.",
+    cue:"Straps are fine on heavy rows. Save the grip for the carries at the end.",
+    lifts:[
+      ["Pull-up or lat pulldown","4 × 6–12",4,["lats","biceps"]],
+      ["Barbell or dumbbell row","4 × 8–12",4,["lats","traps","rear-delts"]],
+      ["Seated cable row","3 × 10–15",3,["lats","traps"]],
+      ["Face pull","3 × 15–20",3,["rear-delts","traps"]],
+      ["Barbell curl","3 × 8–12",3,["biceps"]],
+      ["Hammer curl","3 × 10–15",3,["biceps","forearms"]],
+      ["Farmer's carry","3 × 40 m",3,["forearms","traps"]],
+      ["Wrist curl + reverse","3 × 15–20",3,["forearms"]],
+      ["Pallof press","3 × 12 / side",3,["obliques","abs"]],
+    ]},
+  legs:{label:'Legs',slot:'THU',title:'Quads · Hamstrings · Calves',
+    why:"The most systemically taxing session, so it goes last — with four rest days behind it. Legs are half your body's muscle and the day most people quietly drop.",
+    cue:"Eat carbs beforehand. Squats on an empty tank are miserable and you'll under-perform the whole session.",
+    lifts:[
+      ["Squat or leg press","4 × 6–10",4,["quads","glutes"]],
+      ["Romanian deadlift","3 × 8–12",3,["hamstrings","glutes"]],
+      ["Walking lunge or split squat","3 × 10–12 / leg",3,["quads","glutes"]],
+      ["Leg curl","3 × 12–15",3,["hamstrings"]],
+      ["Calf raise","4 × 12–20",4,["calves"]],
+      ["Cable crunch","3 × 12–15",3,["abs"]],
+      ["Side plank","3 × 30–45 s",3,["obliques"]],
+    ]},
+};
+const MUSCLES=["chest","upper-chest","front-delts","side-delts","rear-delts","triceps","lats","traps",
+  "biceps","forearms","quads","hamstrings","glutes","calves","abs","obliques"];
+
+/* ============================ STATE (localStorage) ============================ */
+const KEY='gymtrack:v1';
+let S={operator:'operator',sessions:[],draft:{},notes:'',day:null,streak:{last:null,count:0},openSession:null};
+
+function today(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function yesterdayOf(iso){const d=new Date(iso+'T00:00');d.setDate(d.getDate()-1);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+
+function load(){
+  try{const raw=localStorage.getItem(KEY);if(raw)S=Object.assign(S,JSON.parse(raw));}catch(e){}
+  if(!S.day)S.day=nextDay();
+  if(!S.draft)S.draft={};
+}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){console.error('save failed',e);}}
+
+function registerActivity(){
+  const t=today();
+  if(S.streak.last===t)return;
+  if(S.streak.last===yesterdayOf(t))S.streak.count+=1;else S.streak.count=1;
+  S.streak.last=t;
+}
+
+/* which session do you owe next — based on what you last logged */
+function nextDay(){
+  const last=[...S.sessions].sort((a,b)=>b.ts-a.ts)[0];
+  if(!last)return 'push';
+  return DAYS[(DAYS.indexOf(last.day)+1)%3];
+}
+function lastFor(d){return S.sessions.filter(s=>s.day===d).sort((a,b)=>b.ts-a.ts)[0]||null;}
+function bestSet(d,name){
+  const s=lastFor(d);if(!s||!s.entries[name]||!s.entries[name].length)return null;
+  return s.entries[name].reduce((a,b)=>(b.w*b.r>a.w*a.r?b:a));
+}
+function cycleDone(){
+  /* how many of the 3 rotation days logged in the last 7 days */
+  const cut=Date.now()-7*864e5;
+  return DAYS.filter(d=>S.sessions.some(s=>s.day===d&&s.ts>cut)).length;
+}
+function musclesHit(){
+  const cut=Date.now()-7*864e5;const set=new Set();
+  S.sessions.filter(s=>s.ts>cut).forEach(s=>{
+    Object.keys(s.entries).forEach(n=>{
+      DAYS.forEach(d=>PROGRAM[d].lifts.forEach(l=>{if(l[0]===n)l[3].forEach(m=>set.add(m));}));
+    });
+  });
+  return set;
+}
+function draftFor(d){
+  if(!S.draft[d])S.draft[d]=Object.fromEntries(PROGRAM[d].lifts.map(l=>[l[0],Array.from({length:l[2]},()=>({w:'',r:''}))]));
+  PROGRAM[d].lifts.forEach(l=>{if(!S.draft[d][l[0]])S.draft[d][l[0]]=Array.from({length:l[2]},()=>({w:'',r:''}));});
+  return S.draft[d];
+}
+
+/* ============================ INSTALL PROMPT ============================ */
+let deferredPrompt=null;
+function refreshInstall(){
+  const b=document.getElementById('install');if(!b)return;
+  const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  const standalone=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone;
+  b.hidden=!(!standalone&&(deferredPrompt||isIOS));
+}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;refreshInstall();});
+window.addEventListener('appinstalled',()=>{deferredPrompt=null;refreshInstall();});
+
+/* ============================ RENDER ============================ */
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+let flash='';
+
+function render(){
+  const app=document.getElementById('app');
+  const d=S.day,p=PROGRAM[d],dr=draftFor(d);
+  const done=cycleDone(),hit=musclesHit();
+
+  app.innerHTML=`
+  <div class="bar">
+    <span class="prompt">${esc(S.operator)}@gym</span><span class="path">~/ppl $</span>
+    <input class="op" id="op" value="${esc(S.operator)}" spellcheck="false" aria-label="Operator name">
+    <span class="spacer"></span>
+    <button class="install" id="install" hidden>install</button>
+    <button class="reset" id="reset">reset</button>
+  </div>
+
+  <div class="board">
+    <div class="cell">
+      <div class="lbl">This week's rotation</div>
+      <div class="scan"><div class="fill" style="width:${(done/3)*100}%"></div><div class="sweep"></div></div>
+      <div class="scan-meta"><b>${done}</b> of <b>3</b> sessions logged in the last 7 days</div>
+    </div>
+    <div class="cell">
+      <div class="stat-stack">
+        <div class="stat flame"><span class="num">${S.sessions.length}</span><span class="unit">sessions logged</span></div>
+        <div class="stat phase"><span class="num">${p.label} · ${p.slot}</span><span class="unit">up next</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-tag">Today's session<span class="spacer"></span>
+    <span class="switch">${DAYS.map(k=>`<button data-d="${k}" class="${k===d?'on':''}">${PROGRAM[k].label}</button>`).join('')}</span>
+  </div>
+
+  <div class="mission">
+    <div class="wk">${p.slot} · ${p.title.toUpperCase()}</div>
+    <h2>${p.label} day</h2>
+    <p class="why">${p.why}</p>
+    ${p.lifts.map((l,i)=>liftRow(d,l,i,dr)).join('')}
+    <div class="subcard lab"><div class="h">Form cue</div><p>${p.cue}</p></div>
+    <div class="subcard recall"><div class="h">The only rule</div><p>Beat one number from last time — a rep, a kilo, a cleaner set. If nothing moves for three weeks, change something.</p></div>
+    <textarea class="notes" id="notes" placeholder="How it felt, what hurt, what to change next time…">${esc(S.notes||'')}</textarea>
+  </div>
+
+  <div class="section-tag done-tag">Muscles hit · last 7 days</div>
+  <div class="skills">${MUSCLES.map(m=>`<span class="skill ${hit.has(m)?'on':''}">${m}</span>`).join('')}</div>
+
+  <div class="section-tag">Session history</div>
+  <div id="hist">${histHTML()}</div>
+
+  <div class="foot"><b>GymTrack</b> · push / pull / legs · tue wed thu<br>saved on this device only</div>
+
+  <div class="commit">
+    <div class="msg">${esc(flash)}</div>
+    <div class="commit-in">
+      <button class="alt" id="copy">copy last</button>
+      <button class="go" id="go">commit session</button>
+    </div>
+  </div>`;
+
+  wire();
+  refreshInstall();
+}
+
+function liftRow(d,l,i,dr){
+  const [name,tgt,,]=l;
+  const rows=dr[name];
+  const filled=rows.some(s=>s.w!==''||s.r!=='');
+  const prev=lastFor(d);
+  const g=prev&&prev.entries[name]?prev.entries[name].map(x=>x.w+'×'+x.r).join('  ') : null;
+  const best=bestSet(d,name);
+  return `<div class="lift ${filled?'on':''}">
+    <div class="lift-top">
+      <span class="glyph">${filled?'✓':String(i+1).padStart(2,'0')}</span>
+      <span class="nm">${name}</span><span class="tgt">${tgt}</span>
+    </div>
+    <div class="prev ${g?'':'cold'}">${g?'last: '+g:'no previous data'}</div>
+    <div class="sets">${rows.map((s,j)=>{
+      const beat=best&&s.w&&s.r&&(Number(s.w)*Number(s.r)>best.w*best.r);
+      return `<span class="set ${beat?'beat':''}">
+        <input type="number" inputmode="decimal" placeholder="kg" value="${s.w}" data-n="${esc(name)}" data-i="${j}" data-f="w">
+        <span class="x">×</span>
+        <input type="number" inputmode="numeric" placeholder="rep" value="${s.r}" data-n="${esc(name)}" data-i="${j}" data-f="r">
+        ${beat?'<span class="up">▲</span>':''}
+      </span>`;}).join('')}</div>
+    <div class="setctl">
+      <button data-add="${esc(name)}">+ set</button>
+      ${rows.length>1?`<button data-rm="${esc(name)}">− set</button>`:''}
+    </div>
+  </div>`;
+}
+
+function histHTML(){
+  const list=[...S.sessions].sort((a,b)=>b.ts-a.ts).slice(0,30);
+  if(!list.length)return `<div class="empty">nothing committed yet.<br>log today and next week you'll have a number to beat.</div>`;
+  return list.map(s=>{
+    const open=S.openSession===s.ts;
+    const vol=Object.values(s.entries).flat().reduce((a,x)=>a+x.w*x.r,0);
+    return `<div class="wkrow ${open?'open':''}">
+      <div class="head" data-t="${s.ts}">
+        <span class="glyph">✓</span>
+        <span class="wname">${PROGRAM[s.day].label} day</span>
+        <span class="wmeta">${s.date} · ${Math.round(vol)} kg vol</span>
+        <span class="chev">▸</span>
+      </div>
+      <div class="body">
+        ${Object.keys(s.entries).map(k=>`<div class="ln"><b>${esc(k)}</b> — ${s.entries[k].map(x=>x.w+'×'+x.r).join(', ')}</div>`).join('')}
+        ${s.notes?`<div class="nt">“${esc(s.notes)}”</div>`:''}
+        <button class="delbtn" data-del="${s.ts}">delete session</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function wire(){
+  document.getElementById('op').addEventListener('change',e=>{S.operator=e.target.value.trim()||'operator';save();render();});
+  document.getElementById('reset').addEventListener('click',()=>{
+    if(confirm('Wipe every logged session? This cannot be undone.')){
+      S={operator:S.operator,sessions:[],draft:{},notes:'',day:'push',streak:{last:null,count:0},openSession:null};
+      save();flash='log wiped';render();
+    }});
+  const ib=document.getElementById('install');
+  ib.addEventListener('click',async()=>{
+    if(deferredPrompt){deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;refreshInstall();}
+    else alert('On iPhone: tap Share, then "Add to Home Screen".');
+  });
+
+  document.querySelectorAll('.switch button').forEach(b=>b.addEventListener('click',()=>{S.day=b.dataset.d;save();render();}));
+
+  document.querySelectorAll('.sets input').forEach(inp=>{
+    inp.addEventListener('input',e=>{
+      const t=e.target;
+      S.draft[S.day][t.dataset.n][t.dataset.i][t.dataset.f]=t.value;
+      save();
+      const cell=t.closest('.set');
+      const b=bestSet(S.day,t.dataset.n);
+      const s=S.draft[S.day][t.dataset.n][t.dataset.i];
+      const beat=b&&s.w&&s.r&&(Number(s.w)*Number(s.r)>b.w*b.r);
+      cell.classList.toggle('beat',!!beat);
+      let up=cell.querySelector('.up');
+      if(beat&&!up){up=document.createElement('span');up.className='up';up.textContent='▲';cell.appendChild(up);}
+      if(!beat&&up)up.remove();
+    });
+  });
+  document.querySelectorAll('[data-add]').forEach(b=>b.addEventListener('click',()=>{
+    S.draft[S.day][b.dataset.add].push({w:'',r:''});save();render();}));
+  document.querySelectorAll('[data-rm]').forEach(b=>b.addEventListener('click',()=>{
+    S.draft[S.day][b.dataset.rm].pop();save();render();}));
+
+  document.getElementById('notes').addEventListener('input',e=>{S.notes=e.target.value;save();});
+
+  document.getElementById('copy').addEventListener('click',()=>{
+    const s=lastFor(S.day);
+    if(!s){flash='no previous '+PROGRAM[S.day].label.toLowerCase()+' session to copy';render();return;}
+    Object.keys(s.entries).forEach(k=>{S.draft[S.day][k]=s.entries[k].map(x=>({w:String(x.w),r:String(x.r)}));});
+    flash='last session copied — now change what you\u2019re beating';save();render();
+  });
+
+  document.getElementById('go').addEventListener('click',()=>{
+    const entries={};let n=0;
+    Object.keys(S.draft[S.day]).forEach(k=>{
+      const rows=S.draft[S.day][k].filter(s=>s.w!==''||s.r!=='').map(s=>({w:Number(s.w)||0,r:Number(s.r)||0}));
+      if(rows.length){entries[k]=rows;n+=rows.length;}
+    });
+    if(!n){flash='enter at least one set before committing';render();return;}
+    const now=new Date();
+    S.sessions.push({ts:now.getTime(),date:now.toLocaleDateString(undefined,{day:'2-digit',month:'short'}),day:S.day,entries,notes:S.notes||''});
+    registerActivity();
+    delete S.draft[S.day];S.notes='';
+    S.day=nextDay();
+    flash=`committed — ${n} sets. next up: ${PROGRAM[S.day].label.toLowerCase()} day`;
+    save();render();window.scrollTo({top:0,behavior:'smooth'});
+  });
+
+  document.querySelectorAll('.wkrow .head').forEach(h=>h.addEventListener('click',()=>{
+    const t=Number(h.dataset.t);S.openSession=S.openSession===t?null:t;save();
+    document.getElementById('hist').innerHTML=histHTML();wire();
+  }));
+  document.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click',()=>{
+    S.sessions=S.sessions.filter(x=>x.ts!==Number(b.dataset.del));save();flash='session deleted';render();}));
+}
+
+load();render();
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));}
+</script>
+</body>
+</html>
