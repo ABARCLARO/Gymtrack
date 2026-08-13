@@ -1,37 +1,44 @@
-/* GymTrack service worker — offline app shell + runtime caching */
-const CACHE = 'gymtrack-v1';
-const ASSETS = [
-  './',
-  './index.html',
-  './manifest.json',
-  './icon-192.png',
-  './icon-512.png',
-  './icon-512-maskable.png',
-  './icon-180.png'
-];
+/* GymTrack service worker — offline app shell */
+const CACHE = 'gymtrack-v3';
+const ASSETS = ['./','./index.html','./manifest.json',
+  './icon-192.png','./icon-512.png','./icon-512-maskable.png','./icon-180.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
-      .then(() => self.clients.claim())
-  );
+  e.waitUntil(caches.keys()
+    .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+    .then(() => self.clients.claim()));
 });
 
+/* network-first for the app shell so updates land without a version bump;
+   cache-first for static assets. Only same-origin GETs are ever cached. */
 self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET') return;
-  e.respondWith(
-    caches.match(e.request).then(cached => {
-      if (cached) return cached;
-      return fetch(e.request).then(res => {
+  const req = e.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  const sameOrigin = url.origin === self.location.origin;
+
+  if (sameOrigin && (req.mode === 'navigate' || url.pathname.endsWith('/index.html'))) {
+    e.respondWith(
+      fetch(req).then(res => {
         const copy = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
+        caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
         return res;
-      }).catch(() => cached);
-    })
+      }).catch(() => caches.match(req).then(r => r || caches.match('./index.html')))
+    );
+    return;
+  }
+
+  e.respondWith(
+    caches.match(req).then(cached => cached || fetch(req).then(res => {
+      if (sameOrigin && res.ok) {
+        const copy = res.clone();
+        caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
+      }
+      return res;
+    }).catch(() => cached))
   );
 });

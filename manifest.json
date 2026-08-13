@@ -1,7 +1,7 @@
 {
-  "name": "GymTrack — Push / Pull / Legs",
+  "name": "GymTrack — Training Log",
   "short_name": "GymTrack",
-  "description": "A push/pull/legs training log with progressive-overload targets built in.",
+  "description": "A training log with progressive-overload targets, rest timer and progress charts.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
