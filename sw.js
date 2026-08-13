@@ -1,5 +1,5 @@
 /* GymTrack service worker — offline app shell */
-const CACHE = 'gymtrack-v3';
+const CACHE = 'gymtrack-v4';
 const ASSETS = ['./','./index.html','./manifest.json',
   './icon-192.png','./icon-512.png','./icon-512-maskable.png','./icon-180.png'];
 

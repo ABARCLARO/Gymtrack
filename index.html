@@ -45,6 +45,14 @@
   .bar .gear{color:var(--dimmer);border:1px solid var(--line-soft);border-radius:6px;padding:4px 9px}
   .bar .gear:hover,.bar .gear.on{color:var(--text);border-color:var(--line)}
 
+  .brandrow{display:flex;align-items:center;gap:10px;margin:0 2px 16px;flex-wrap:wrap}
+  .brandrow .mark{width:38px;height:24px;flex:none}
+  .wordmark{font-family:var(--mono);font-size:21px;font-weight:700;letter-spacing:-.02em;color:var(--text)}
+  .wordmark .w2{color:var(--amber)}
+  .byline{font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;
+    color:var(--dimmer);border-left:1px solid var(--line);padding-left:10px}
+  @media(max-width:400px){.byline{border-left:none;padding-left:0;width:100%;margin-top:-4px}}
+
   .board{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:14px}
   @media(max-width:640px){.board{grid-template-columns:1fr}}
   .cell{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px 20px}
@@ -621,6 +629,18 @@ function render(){
     <button class="gear ${ui.panel==='settings'?'on':''}" id="gear">settings</button>
   </div>
 
+  <div class="brandrow">
+    <svg class="mark" viewBox="0 0 64 40" aria-hidden="true">
+      <rect x="6" y="10" width="5" height="20" rx="2" fill="#ffb020"/>
+      <rect x="14" y="4" width="6" height="32" rx="2" fill="#3fd07a"/>
+      <rect x="20" y="17.5" width="24" height="5" rx="2.5" fill="#465562"/>
+      <rect x="44" y="4" width="6" height="32" rx="2" fill="#3fd07a"/>
+      <rect x="53" y="10" width="5" height="20" rx="2" fill="#ffb020"/>
+    </svg>
+    <span class="wordmark">Gym<span class="w2">Track</span></span>
+    <span class="byline">by CJ ABAR</span>
+  </div>
+
   <div class="board">
     <div class="cell">
       <div class="lbl">Rotation · last 7 days</div>
@@ -664,7 +684,7 @@ function render(){
   <div class="section-tag">Session history</div>
   <div id="hist">${histHTML()}</div>
 
-  <div class="foot"><b>GymTrack</b> · ${S.program.map(x=>esc(x.label.toLowerCase())).join(' / ')}<br>stored on this device — export to keep a backup</div>
+  <div class="foot"><b>GymTrack</b> by CJ ABAR · ${S.program.map(x=>esc(x.label.toLowerCase())).join(' / ')}<br>stored on this device — export to keep a backup</div>
 
   <div id="timer"></div>
   <div class="commit">
